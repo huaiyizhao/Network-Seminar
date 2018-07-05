@@ -60,7 +60,7 @@ struct tcp_sock *alloc_tcp_sock()
 	init_list_head(&(tsk->retrans_timer.list));
 	init_list_head(&retrans_list);
 
-	tsk->rcv_buf = alloc_ring_buffer(tsk->rcv_wnd << 3);
+	tsk->rcv_buf = alloc_ring_buffer(tsk->rcv_wnd);
 	tsk->rcv_wnd = ring_buffer_free(tsk->rcv_buf);
 	tsk->wait_connect = alloc_wait_struct();
 	tsk->wait_accept = alloc_wait_struct();
