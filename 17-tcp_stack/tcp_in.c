@@ -71,17 +71,22 @@ void tcp_state_syn_sent(struct tcp_sock *tsk, struct tcp_cb *cb, char *packet)
 // if the snd_wnd before updating is zero, notify tcp_sock_send (wait_send)
 static inline void tcp_update_window(struct tcp_sock *tsk, struct tcp_cb *cb)
 {
-	u16 old_snd_wnd = tsk->snd_wnd;
+	// u16 old_snd_wnd = tsk->snd_wnd;
 	tsk->snd_wnd = cb->rwnd;
-	if (old_snd_wnd == 0)
-		wake_up(tsk->wait_send);
+	// if (old_snd_wnd == 0)
+	// if(tsk->snd_wnd > cb->pl_len) {
+	// 	printf("going to wakeup send\n");
+	// 	// wake_up(tsk->wait_send);
+	// }
 }
 
 // update the snd_wnd safely: cb->ack should be between snd_una and snd_nxt
 static inline void tcp_update_window_safe(struct tcp_sock *tsk, struct tcp_cb *cb)
 {
-	if (less_or_equal_32b(tsk->snd_una, cb->ack) && less_or_equal_32b(cb->ack, tsk->snd_nxt))
+	if (less_or_equal_32b(tsk->snd_una, cb->ack) && less_or_equal_32b(cb->ack, tsk->snd_nxt)) {
+		// printf("going to update window\n");
 		tcp_update_window(tsk, cb);
+	}
 }
 
 // handling incoming ack packet for tcp sock in TCP_SYN_RECV state
@@ -142,10 +147,11 @@ static inline int is_tcp_seq_valid(struct tcp_sock *tsk, struct tcp_cb *cb)
 //   9. (process the payload of the packet: call tcp_recv_data to receive data;)
 //  10. if the TCP_FIN bit is set, update the TCP_STATE accordingly;
 //  11. at last, do not forget to reply with TCP_ACK if the connection is alive.
+int end_max = 0;
 void tcp_process(struct tcp_sock *tsk, struct tcp_cb *cb, char *packet)
 {
-	log(DEBUG, "receive packet: flag = %x,seq = %d,ack = %d", 
-		cb->flags, cb->seq, cb->ack);
+	log(DEBUG, "receive packet: flag = %x,seq = %d,ack = %d,rwnd=%d", 
+		cb->flags, cb->seq, cb->ack, cb->rwnd);
 	relese_snd_buf(tsk, cb->ack);
 	int trigger = 0;
 	// assert(tsk->rcv_nxt == 0 || cb->seq == tsk->rcv_nxt);
@@ -156,6 +162,8 @@ void tcp_process(struct tcp_sock *tsk, struct tcp_cb *cb, char *packet)
 	else if(tsk->rcv_nxt == 0) 
 		tsk->rcv_nxt = cb->seq_end;
 	tsk->snd_una = cb->ack;
+	if(end_max < cb->seq_end)
+		end_max = cb->seq_end;
 	tcp_update_window_safe(tsk, cb);
 	if(cb->flags & TCP_RST) {tcp_set_state(tsk, TCP_CLOSED); tcp_unhash(tsk); return;}
 	int state = tsk->state;
@@ -206,7 +214,13 @@ void tcp_process(struct tcp_sock *tsk, struct tcp_cb *cb, char *packet)
 			else if(cb->pl_len) {// pend packet
 				// printf("go to reserve\n");
 				reserve(tsk, cb->seq, cb->seq_end, cb->payload, cb->pl_len, trigger);
-				// tsk->rcv_wnd = TCP_DEFAULT_WINDOW + tsk->rcv_nxt - cb->seq_end;
+				int window = TCP_DEFAULT_WINDOW + tsk->rcv_nxt - end_max;
+				if(window > 0)
+					tsk->rcv_wnd = (u16)window;
+				else
+					tsk->rcv_wnd = 0;
+				// tsk->rcv_wnd = (u16)(TCP_DEFAULT_WINDOW + tsk->rcv_nxt - end_max);
+				// printf("rcv_wnd=%d,rcv_nxt=%d,end_max=%d\n", tsk->rcv_wnd, tsk->rcv_nxt, end_max);
 				tcp_send_control_packet(tsk,TCP_ACK); 
 			}
 			else if(cb->flags == TCP_ACK && cb->pl_len == 0) ;// avoid ACK loop

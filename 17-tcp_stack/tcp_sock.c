@@ -406,11 +406,11 @@ int tcp_sock_read(struct tcp_sock *tsk, char *buf, int len)
 int tcp_sock_write(struct tcp_sock *tsk, char *buf, int len)
 {
 	// printf("wnd = %d\n",tsk->snd_wnd);
-	if(tsk->snd_wnd == 0) {
-		// printf("wnd ==0 ????????????\n");
-		sleep_on(tsk->wait_send);
-	}
 	int packet_len = min(len + ETHER_HDR_SIZE + IP_BASE_HDR_SIZE + TCP_BASE_HDR_SIZE, ETH_FRAME_LEN);
+	while(tsk->snd_wnd < packet_len) {
+		// printf("wnd <<<<<<<<<<<<<<<<<<<\n");
+		usleep(1000);
+	}
 	char * packet = malloc(packet_len);
 	char * data = packet + ETHER_HDR_SIZE + IP_BASE_HDR_SIZE + TCP_BASE_HDR_SIZE;
 	memcpy(data, buf, packet_len - ETHER_HDR_SIZE - IP_BASE_HDR_SIZE - TCP_BASE_HDR_SIZE);

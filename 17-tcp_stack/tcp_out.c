@@ -55,9 +55,9 @@ void tcp_send_packet(struct tcp_sock *tsk, char *packet, int len)
 
 	pend2buf(tsk, tsk->snd_nxt, tsk->snd_nxt + tcp_data_len, packet, len);
 	tsk->snd_nxt += tcp_data_len;
-	// tsk->snd_wnd -= tcp_data_len;
+	tsk->snd_wnd -= tcp_data_len;
 	ip_send_packet(packet, len);
-	// printf("send a data packet,seq = %d,end = %d\n", tsk->snd_nxt - tcp_data_len, tsk->snd_nxt);
+	printf("send a data packet,seq=%d,end=%d,wnd_now=%d\n", tsk->snd_nxt - tcp_data_len, tsk->snd_nxt, tsk->snd_wnd);
 }
 
 // send a tcp control packet
@@ -90,7 +90,7 @@ void tcp_send_control_packet(struct tcp_sock *tsk, u8 flags)
 		tsk->snd_nxt += 1;
 	}
 	ip_send_packet(packet, pkt_size);
-	// printf("send a control packet, flags = %x, ack ======= %d\n", flags, tsk->rcv_nxt);
+	printf("send a control packet, flags=%x,ack=%d,rwnd=%d\n", flags, tsk->rcv_nxt,tsk->rcv_wnd);
 }
 
 // send tcp reset packet
