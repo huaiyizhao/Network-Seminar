@@ -31,9 +31,14 @@ void *tcp_server(void *arg)
 
 	log(DEBUG, "accept a connection.");
 
+	file_end = 0;
 	char rbuf[500];
-	FILE * fp = fopen("../receive.dat", "w");
-	int all = 0;
+	FILE * fp = fopen("receive.dat", "wb");
+	if(!fp) {
+		printf("Can't open file for write!!!\n");
+		exit(1);
+	}
+	// int all = 0;
 	while (1) {
 		int rlen = tcp_sock_read(csk, rbuf, 500);
 		if (rlen < 0) {
@@ -41,9 +46,13 @@ void *tcp_server(void *arg)
 			break;
 		} 
 		else {
+			if(!rlen) {
+				printf("file end\n");
+				break;
+			}
 			// printf("read%dbyte,", rlen);
-			int size = fwrite(rbuf, 1, rlen, fp);
-			all += size;
+			fwrite(rbuf, 1, rlen, fp);
+			// all += size;
 			// printf("write %d byte to file\n", all);
 			// rbuf[rlen] = '\0';
 			// sprintf(wbuf, "server echoes: %s", rbuf);
@@ -51,11 +60,7 @@ void *tcp_server(void *arg)
 			// 	log(DEBUG, "tcp_sock_write return negative value, finish transmission.");
 			// 	break;
 			// }
-			if(size != 500){
-				printf("size = %d,file end\n", size);
-				break;
 			}
-		}
 	}
 	log(DEBUG, "close this connection.");
 	// sleep(2);
@@ -78,23 +83,19 @@ void *tcp_client(void *arg)
 		exit(1);
 	}
 
-	FILE * fp = fopen("../1MB.dat", "r");
+	FILE * fp = fopen("1MB.dat", "rb");
+	if(!fp) {
+		printf("Can't open file for read!!!\n");
+		exit(1);
+	}
 	char rbuf[500];
-	int all_read = 0;
-	int all_send = 0;
-	while(!feof(fp)) {
-		int send;
-		int size = fread(rbuf, 1, 500, fp);
-		all_read += size;
-		// printf("read %d byte to rbuf ", all_read);
-
-		if(size == 0)
-			break;
-		send = tcp_sock_write(tsk, rbuf, size);
-		if (send < 0)
-			break;
-		all_send += send;
-		// printf("send %d byte to sock\n", all_send);
+	int size;
+	while((size = fread(rbuf, 1, 500, fp))) {
+		int send = tcp_sock_write(tsk, rbuf, size);
+		if (send < 0) {
+			printf("error send\n");
+			exit(1);
+		}
 		usleep(5000);
 	}
 	while(tsk->snd_nxt != tsk->snd_una)

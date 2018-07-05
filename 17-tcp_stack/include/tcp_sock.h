@@ -6,7 +6,7 @@
 #include "tcp.h"
 #include "tcp_timer.h"
 #include "ring_buffer.h"
-
+// #include "tcp_apps.h"
 #include "synch_wait.h"
 
 #include <pthread.h>
@@ -14,6 +14,7 @@
 
 #define PORT_MIN	12345
 #define PORT_MAX	23456
+int file_end;
 
 struct sock_addr {
 	u32 ip;

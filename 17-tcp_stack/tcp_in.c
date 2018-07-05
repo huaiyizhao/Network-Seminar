@@ -209,6 +209,7 @@ void tcp_process(struct tcp_sock *tsk, struct tcp_cb *cb, char *packet)
 				tcp_send_control_packet(tsk, TCP_ACK);
 				while(!ring_buffer_empty(tsk->rcv_buf))
 					sleep(1);
+				file_end = 1;
 				tcp_sock_close(tsk);
 			}
 			else if(cb->pl_len) {// pend packet
